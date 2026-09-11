@@ -1,4 +1,4 @@
-# PlexQo RUN
+# JogJoy
 
 A basic, reliable running tracker built for the PlexQo RUN hiring assignment: start a run, track distance/duration/pace live, pause/resume, finish, and view a summary with route map. No gamification, social features, AI coaching, or backend — by design, per the assignment brief.
 
