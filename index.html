@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>PlexQo RUN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/styles/style.css" />
+</head>
+<body>
+  <div id="app" class="phone-frame">
+
+    <header class="topbar">
+      <div class="topbar-brand">PLEXQO RUN</div>
+      <div class="topbar-right">
+        <div id="gps-status" class="gps-pill" hidden>
+          <span class="gps-dot" data-status="LOST"></span>
+          <span class="gps-label">--</span>
+        </div>
+        <button id="btn-theme-toggle" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">◐</button>
+      </div>
+    </header>
+
+    <main id="screen-root" class="screen-root">
+
+      <!-- HOME (light theme) -->
+      <section id="screen-home" class="screen theme-light" hidden>
+        <div id="recovery-banner" class="recovery-banner" hidden>
+          <span>Unfinished run found</span>
+          <button id="btn-resume-recovered" class="btn btn-small">Resume</button>
+          <button id="btn-discard-recovered" class="btn-text-small">Discard</button>
+        </div>
+
+        <div class="home-hero">
+          <h1 class="home-title">Ready to run?</h1>
+          <button id="btn-start-run" class="btn btn-primary btn-large">Start Run</button>
+        </div>
+
+        <div class="section-block">
+          <div class="section-header"><h2>Recent runs</h2></div>
+          <div id="recent-runs-list" class="run-list"></div>
+          <div id="recent-runs-empty" class="empty-state" hidden>
+            <p>No runs yet. Finished runs will show up here.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- CALIBRATING (dark theme) -->
+      <section id="screen-calibrating" class="screen theme-dark" hidden>
+        <div class="calibrating-wrap">
+          <span class="pulse-dot"></span>
+          <p class="calibrating-text">Finding GPS…</p>
+          <p class="calibrating-sub" id="calibrating-accuracy">Locating your position</p>
+          <button id="btn-cancel-calibration" class="btn-text-small">Cancel</button>
+        </div>
+      </section>
+
+      <!-- PERMISSION / ERROR (dark theme, appears during start flow) -->
+      <section id="screen-permission-error" class="screen theme-dark" hidden>
+        <div class="permission-wrap">
+          <p class="permission-title">Location access needed</p>
+          <p class="permission-body">
+            RUN needs your location to track distance, pace and your route.
+            It's only used while you're actively tracking a run.
+          </p>
+          <button id="btn-retry-permission" class="btn btn-primary btn-large">Try again</button>
+        </div>
+      </section>
+
+      <!-- ACTIVE RUN (dark theme) -->
+      <section id="screen-run" class="screen theme-dark" hidden>
+        <div id="run-map" class="run-map"></div>
+
+        <div class="run-status-row">
+          <span id="run-status-badge" class="status-badge" data-state="RUNNING">Active</span>
+        </div>
+
+        <div class="hero-stat">
+          <span id="run-distance" class="hero-number">0.00</span>
+          <span id="run-distance-unit" class="hero-unit">km</span>
+        </div>
+
+        <div class="stat-tiles">
+          <div class="stat-tile">
+            <span class="stat-tile-label">Duration</span>
+            <span id="run-duration" class="stat-tile-value">0:00</span>
+          </div>
+          <div class="stat-tile">
+            <span class="stat-tile-label">Avg Pace</span>
+            <span id="run-pace" class="stat-tile-value">--:-- /km</span>
+          </div>
+        </div>
+
+        <div class="run-actions">
+          <button id="btn-pause-resume" class="btn btn-secondary btn-large">Pause</button>
+          <button id="btn-finish-run" class="btn btn-primary btn-large">Finish</button>
+        </div>
+      </section>
+
+      <!-- SUMMARY (light theme) -->
+      <section id="screen-summary" class="screen theme-light" hidden>
+        <p class="summary-eyebrow">Run complete</p>
+
+        <div class="hero-stat">
+          <span id="summary-distance" class="hero-number">0.00</span>
+          <span id="summary-distance-unit" class="hero-unit">km</span>
+        </div>
+
+        <div class="stat-tiles">
+          <div class="stat-tile">
+            <span class="stat-tile-label">Duration</span>
+            <span id="summary-duration" class="stat-tile-value">0:00</span>
+          </div>
+          <div class="stat-tile">
+            <span class="stat-tile-label">Avg Pace</span>
+            <span id="summary-pace" class="stat-tile-value">--:-- /km</span>
+          </div>
+        </div>
+
+        <div id="summary-map" class="summary-map"></div>
+
+        <button id="btn-new-run" class="btn btn-primary btn-large">Start new run</button>
+      </section>
+
+      <!-- RUN DETAIL (light theme, viewing a past run from history) -->
+      <section id="screen-run-detail" class="screen theme-light" hidden>
+        <button id="btn-back-to-home" class="btn-text-small back-btn">← Back</button>
+        <p id="detail-date" class="summary-eyebrow">--</p>
+
+        <div class="hero-stat">
+          <span id="detail-distance" class="hero-number">0.00</span>
+          <span id="detail-distance-unit" class="hero-unit">km</span>
+        </div>
+
+        <div class="stat-tiles">
+          <div class="stat-tile">
+            <span class="stat-tile-label">Duration</span>
+            <span id="detail-duration" class="stat-tile-value">0:00</span>
+          </div>
+          <div class="stat-tile">
+            <span class="stat-tile-label">Avg Pace</span>
+            <span id="detail-pace" class="stat-tile-value">--:-- /km</span>
+          </div>
+        </div>
+
+        <div id="detail-map" class="summary-map"></div>
+      </section>
+
+    </main>
+
+    <!-- FINISH CONFIRMATION SHEET -->
+    <div id="finish-confirm" class="confirm-sheet" hidden>
+      <div class="confirm-sheet-inner">
+        <p class="confirm-title">Finish this run?</p>
+        <div class="confirm-stats">
+          <span id="confirm-distance">0.00 km</span>
+          <span id="confirm-duration">0:00</span>
+        </div>
+        <div class="confirm-actions">
+          <button id="btn-confirm-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="btn-confirm-finish" class="btn btn-primary">Finish</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM TAB BAR -->
+    <nav class="tabbar">
+      <button class="tab-item" data-tab="start">
+        <span class="tab-icon">▶</span><span class="tab-label">Start</span>
+      </button>
+      <button class="tab-item" data-tab="active">
+        <span class="tab-icon">●</span><span class="tab-label">Active</span>
+      </button>
+      <button class="tab-item" data-tab="summary">
+        <span class="tab-icon">■</span><span class="tab-label">Summary</span>
+      </button>
+      <button class="tab-item" data-tab="history">
+        <span class="tab-icon">▤</span><span class="tab-label">History</span>
+      </button>
+    </nav>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

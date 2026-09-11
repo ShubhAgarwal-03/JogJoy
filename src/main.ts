@@ -131,10 +131,6 @@ export class RunController {
     this.stateMachine.beginRunning(anchor);
     this.timer.start((deltaMs) => this.stateMachine.tickDuration(deltaMs));
     this.startGpsWatchdog();
-
-    // Re-attach the ongoing watch handler now that we're past calibration.
-    // (requestPermissionAndStart's callback already routes through
-    // handleGpsPoint below for all subsequent updates.)
   }
 
   /** Called by the geolocation watch for every raw point once RUNNING/PAUSED. */
@@ -233,4 +229,147 @@ export class RunController {
   startNewRun(): void {
     this.stateMachine.reset();
   }
+}
+
+// =========================================================================
+// DOM bootstrap: connects RunController to the screens in index.html.
+// Nothing above this line knows the DOM exists; nothing below computes
+// distance/duration/pace itself — it only renders what the controller gives it.
+// =========================================================================
+
+import { renderHomeScreen, renderRecoveryBanner } from "./ui/screens/homeScreen";
+import { renderRunScreen, initRunMap, destroyRunMap } from "./ui/screens/runScreen";
+import { renderSummaryScreen } from "./ui/screens/summaryScreen";
+import { renderRunDetailScreen } from "./ui/screens/runDetailScreen";
+import { renderGpsStatus } from "./ui/components/gpsStatusBadge";
+import { showFinishConfirm } from "./ui/components/confirmDialog";
+import { showPermissionError, hidePermissionError } from "./ui/components/permissionPrompt";
+import { getUnitPreference } from "./utils/unitPreference";
+import { applyThemePreference, getThemePreference, setThemePreference } from "./utils/themePreference";
+import { clearInProgressRun } from "./storage/runRecovery";
+import { RunSummary } from "./state/types";
+
+const controller = new RunController();
+applyThemePreference();
+
+const screens = [
+  "screen-home", "screen-calibrating", "screen-permission-error",
+  "screen-run", "screen-summary", "screen-run-detail",
+] as const;
+type ScreenId = typeof screens[number];
+
+function showScreen(id: ScreenId) {
+  screens.forEach((s) => {
+    document.getElementById(s)!.hidden = s !== id;
+  });
+}
+
+function isScreenVisible(id: ScreenId): boolean {
+  return document.getElementById(id)!.hidden === false;
+}
+
+// --- Single source of truth for reacting to state changes ---
+// Runs on every RunStateMachine change: updates the GPS pill, re-renders
+// the run screen while live, and catches the CALIBRATING -> RUNNING
+// transition to swap screens and mount the map exactly once.
+controller.onChange((snapshot) => {
+  renderGpsStatus(snapshot);
+
+  if (snapshot.state === "RUNNING" || snapshot.state === "PAUSED") {
+    if (!isScreenVisible("screen-run")) {
+      showScreen("screen-run");
+      initRunMap();
+    }
+    renderRunScreen(snapshot);
+  }
+});
+
+// --- Home screen ---
+function goHome() {
+  showScreen("screen-home");
+  renderHomeScreen((run) => openRunDetail(run));
+  renderRecoveryBanner(
+    () => resumeRecoveredRun(),
+    () => {
+      clearInProgressRun();
+      renderRecoveryBanner(() => {}, () => {});
+    }
+  );
+}
+
+function resumeRecoveredRun() {
+  const restored = controller.tryRecoverInProgressRun();
+  if (!restored) return;
+  showScreen("screen-run");
+  initRunMap();
+  renderRunScreen(controller.getSnapshot());
+}
+
+function openRunDetail(run: RunSummary) {
+  showScreen("screen-run-detail");
+  renderRunDetailScreen(run);
+}
+
+document.getElementById("btn-back-to-home")!.addEventListener("click", goHome);
+
+// --- Start flow ---
+document.getElementById("btn-start-run")!.addEventListener("click", () => {
+  showScreen("screen-calibrating");
+  controller.startRun(() => showScreen("screen-permission-error"));
+});
+
+document.getElementById("btn-cancel-calibration")!.addEventListener("click", () => {
+  goHome();
+});
+
+document.getElementById("btn-retry-permission")!.addEventListener("click", () => {
+  hidePermissionError();
+  showScreen("screen-calibrating");
+  controller.startRun(() => showScreen("screen-permission-error"));
+});
+
+// --- Pause / Resume ---
+document.getElementById("btn-pause-resume")!.addEventListener("click", () => {
+  const state = controller.getSnapshot().state;
+  if (state === "RUNNING") controller.pause();
+  else if (state === "PAUSED") controller.resume();
+});
+
+// --- Finish ---
+document.getElementById("btn-finish-run")!.addEventListener("click", () => {
+  const snapshot = controller.getSnapshot();
+  showFinishConfirm(
+    snapshot.totalDistanceMeters,
+    snapshot.activeDurationMs,
+    getUnitPreference(),
+    () => {
+      const summary = controller.finish();
+      destroyRunMap();
+      showScreen("screen-summary");
+      renderSummaryScreen(summary);
+    },
+    () => { /* cancelled, stay on run screen */ }
+  );
+});
+
+// --- New run from summary ---
+document.getElementById("btn-new-run")!.addEventListener("click", () => {
+  controller.startNewRun();
+  goHome();
+});
+
+// --- Theme toggle ---
+document.getElementById("btn-theme-toggle")!.addEventListener("click", () => {
+  const next = getThemePreference() === "dark" ? "auto" : "dark";
+  setThemePreference(next);
+});
+
+// --- Boot ---
+const wasRecovered = controller.tryRecoverInProgressRun();
+if (wasRecovered) {
+  showScreen("screen-run");
+  initRunMap();
+  renderRunScreen(controller.getSnapshot());
+} else {
+  goHome();
 }
