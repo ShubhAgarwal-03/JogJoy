@@ -272,6 +272,7 @@ function isScreenVisible(id: ScreenId): boolean {
 // transition to swap screens and mount the map exactly once.
 controller.onChange((snapshot) => {
   renderGpsStatus(snapshot);
+  setActiveTab("active"); 
 
   if (snapshot.state === "RUNNING" || snapshot.state === "PAUSED") {
     if (!isScreenVisible("screen-run")) {
@@ -360,6 +361,47 @@ document.getElementById("btn-new-run")!.addEventListener("click", () => {
 document.getElementById("btn-theme-toggle")!.addEventListener("click", () => {
   const next = getThemePreference() === "dark" ? "auto" : "dark";
   setThemePreference(next);
+});
+
+// --- Bottom tab bar ---
+import { getRecentRuns } from "./storage/runHistory";
+
+function setActiveTab(tab: string) {
+  document.querySelectorAll(".tab-item").forEach((el) => {
+    el.classList.toggle("active", el.getAttribute("data-tab") === tab);
+  });
+}
+
+document.querySelectorAll(".tab-item").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const tab = btn.getAttribute("data-tab");
+    const state = controller.getSnapshot().state;
+
+    if (tab === "start") {
+      // Only go home if not mid-run; otherwise Start shouldn't abandon an active run.
+      if (state === "RUNNING" || state === "PAUSED") return;
+      goHome();
+    }
+
+    if (tab === "active") {
+      if (state === "RUNNING" || state === "PAUSED") {
+        showScreen("screen-run");
+        renderRunScreen(controller.getSnapshot());
+      }
+      // If there's no active run, this tab has nothing to show — no-op rather than error.
+    }
+
+    if (tab === "summary") {
+      const latest = getRecentRuns(1)[0];
+      if (latest) openRunDetail(latest);
+    }
+
+    if (tab === "history") {
+      goHome(); // history list lives on the home screen
+    }
+
+    setActiveTab(tab ?? "start");
+  });
 });
 
 // --- Boot ---
