@@ -243,11 +243,9 @@ import { renderSummaryScreen } from "./ui/screens/summaryScreen";
 import { renderRunDetailScreen } from "./ui/screens/runDetailScreen";
 import { renderGpsStatus } from "./ui/components/gpsStatusBadge";
 import { showFinishConfirm } from "./ui/components/confirmDialog";
-import { showPermissionError, hidePermissionError } from "./ui/components/permissionPrompt";
+import { hidePermissionError } from "./ui/components/permissionPrompt";
 import { getUnitPreference } from "./utils/unitPreference";
 import { applyThemePreference, getThemePreference, setThemePreference } from "./utils/themePreference";
-import { clearInProgressRun } from "./storage/runRecovery";
-import { RunSummary } from "./state/types";
 
 const controller = new RunController();
 applyThemePreference();
