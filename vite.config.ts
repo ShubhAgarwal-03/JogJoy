@@ -1,0 +1,12 @@
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  root: ".",
+  publicDir: "public",
+  server: {
+    host: true,
+  },
+  test: {
+    environment: "jsdom",
+  },
+});

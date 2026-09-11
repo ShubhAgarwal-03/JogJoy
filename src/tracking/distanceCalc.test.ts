@@ -20,8 +20,8 @@ describe("haversineMeters", () => {
     const bengaluru = point(12.9716, 77.5946);
     const airport = point(13.1986, 77.7066);
     const distance = haversineMeters(bengaluru, airport);
-    expect(distance).toBeGreaterThan(30000);
-    expect(distance).toBeLessThan(40000);
+    expect(distance).toBeGreaterThan(25000);
+    expect(distance).toBeLessThan(31000);
   });
 
   it("is symmetric (A->B equals B->A)", () => {

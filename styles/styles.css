@@ -351,6 +351,10 @@ body.force-dark .theme-light {
   margin: 0 auto;
 }
 
+.confirm-sheet[hidden] {
+  display: none;
+}
+
 .confirm-sheet-inner {
   background: var(--surface, #151A22);
   color: var(--text-primary, #F5F5F2);
